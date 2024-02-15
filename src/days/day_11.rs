@@ -3,7 +3,7 @@ use color_eyre::{Report, Result};
 
 pub const DAY: Day = Day {
     day: 11,
-    name: "",
+    name: "Cosmic Expansion",
     part_1: run_part1,
     part_2: None,
     other: &[("Parse", run_parse)],
@@ -48,10 +48,67 @@ fn parse(input: &str) -> Result<Data> {
         .into())
 }
 
+use std::{cell::RefCell, rc::Rc, sync::Mutex};
 fn part1(input: &Data) -> u32 {
     let mut data = input.to_owned();
-    // check rows if empty
-    for line in data 
+    // this vector holds the amount of empty space in a column
+    // if its 10, the column is empty
+    let colums = RefCell::new(vec![0; input.0[0].len()]);
+    let mut rows = Vec::with_capacity(input.0.len());
+
+    // check rows if empty, expand if it is
+    for (i, line) in data.0.iter().enumerate() {
+        println!();
+        let x = line
+            .iter()
+            .enumerate()
+            .map(|(j, x)| {
+                let cell_is_empty = x.is_none();
+                // if the cell is empty, increase the amount of empty space in the column j
+                if cell_is_empty {
+                    colums.borrow_mut()[j] += 1;
+                }
+                // print!("{i} {j} empty: {cell_is_empty}  ");
+                cell_is_empty
+            })
+            // collect so the column computation works
+            .collect::<Vec<_>>()
+            .iter()
+            .all(|x| *x);
+
+        rows.push(x);
+    }
+
+    // map the rows and colums to vecs of the indices where empty space needs to be inserted
+    let colums = colums
+        .into_inner()
+        .iter()
+        .map(|val| *val == 10)
+        .enumerate()
+        .filter(|(_, bool)| *bool)
+        .map(|(i, _)| i)
+        .collect::<Vec<_>>();
+
+    let rows = rows
+        .iter()
+        .enumerate()
+        .map(|tuple: (usize, &bool)| tuple)
+        .filter(|(_, bool)| **bool)
+        .map(|(i, _)| i)
+        .collect::<Vec<_>>();
+
+    dbg!(&rows);
+    dbg!(&colums);
+
+    let empty_column = vec!['.'; data.0.len()];
+
+    for index in colums {}
+
+    let empty_row = vec![None; data.0[0].len()];
+
+    for index in rows {
+        data.0.insert(index, empty_row.clone());
+    }
     0
 }
 
@@ -61,7 +118,7 @@ mod day11_tests {
     use aoc_lib::Example;
 
     #[test]
-    fn part1_test() {
+    fn day11() {
         let data = aoc_lib::input(DAY.day)
             .example(Example::Part1, 0)
             .open()
