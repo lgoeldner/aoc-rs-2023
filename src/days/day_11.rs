@@ -24,6 +24,21 @@ fn run_parse(input: &str, b: Bench) -> BenchResult {
 }
 #[derive(Debug, Clone)]
 pub struct Map(Vec<Vec<Option<()>>>);
+use colored::Colorize;
+impl std::fmt::Display for Map {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for row in &self.0 {
+            for cell in row {
+                match cell {
+                    Some(_) => write!(f, "{}", "#".red())?,
+                    None => write!(f, ".")?,
+                }
+            }
+            writeln!(f)?;
+        }
+        Ok(())
+    }
+}
 
 impl From<Vec<Vec<Option<()>>>> for Map {
     fn from(value: Vec<Vec<Option<()>>>) -> Self {
@@ -48,7 +63,7 @@ fn parse(input: &str) -> Result<Data> {
         .into())
 }
 
-use std::{cell::RefCell, rc::Rc, sync::Mutex};
+use std::{cell::RefCell, path::Display, rc::Rc, sync::Mutex};
 fn part1(input: &Data) -> u32 {
     let mut data = input.to_owned();
     // this vector holds the amount of empty space in a column
@@ -80,35 +95,36 @@ fn part1(input: &Data) -> u32 {
     }
 
     // map the rows and colums to vecs of the indices where empty space needs to be inserted
-    let colums = colums
+    let colums_to_insert = colums
         .into_inner()
         .iter()
-        .map(|val| *val == 10)
         .enumerate()
-        .filter(|(_, bool)| *bool)
-        .map(|(i, _)| i)
+        .filter_map(|(i, empty_space)| if *empty_space == 10 { Some(i) } else { None })
         .collect::<Vec<_>>();
 
-    let rows = rows
+    let rows_to_insert = rows
         .iter()
         .enumerate()
-        .map(|tuple: (usize, &bool)| tuple)
-        .filter(|(_, bool)| **bool)
-        .map(|(i, _)| i)
+        .filter_map(|(i, bool)| if *bool { Some(i) } else { None })
         .collect::<Vec<_>>();
 
-    dbg!(&rows);
-    dbg!(&colums);
+    dbg!(&rows_to_insert);
+    dbg!(&colums_to_insert);
 
     let empty_column = vec!['.'; data.0.len()];
 
-    for index in colums {}
+    for (already_inserted, index) in colums_to_insert.iter().enumerate() {
+        for line in &mut data.0 {
+            line.insert(*index + already_inserted, None);
+        }
+    }
 
     let empty_row = vec![None; data.0[0].len()];
 
-    for index in rows {
-        data.0.insert(index, empty_row.clone());
+    for (already_inserted, index) in rows_to_insert.iter().enumerate() {
+        data.0.insert(*index + already_inserted, empty_row.clone());
     }
+    println!("{data}");
     0
 }
 
