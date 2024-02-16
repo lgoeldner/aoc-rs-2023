@@ -1,3 +1,4 @@
+#![allow(unused)]
 use aoc_lib::{Bench, BenchResult, Day, NoError, ParseResult, UserError};
 use color_eyre::{Report, Result};
 
