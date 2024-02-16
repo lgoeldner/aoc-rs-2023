@@ -31,13 +31,11 @@ fn part1(input: &Data) -> u64 {
     // if its 10, the column is empty
 
     // check which rows are empty
-    let (rows, columns) = get_empty_rows(&data);
+    let (rows, columns) = get_empty(&data);
 
     // map the rows and colums to vecs of the indices where empty space needs to be inserted
-    let (colums_to_insert, rows_to_insert) = empty_space_to_indices(columns, rows);
-
-    // dbg!(&rows_to_insert);
-    // dbg!(&colums_to_insert);
+    let (colums_to_insert, rows_to_insert) =
+        empty_space_to_indices(columns, rows, data.0.len() as u32);
 
     for (already_inserted, index) in colums_to_insert.iter().enumerate() {
         for line in &mut data.0 {
@@ -52,7 +50,6 @@ fn part1(input: &Data) -> u64 {
     }
 
     let mut star_positions: Vec<Star<_>> = vec![];
-    println!("{data}");
     for (y, line) in data.0.iter().enumerate() {
         for (x, cell) in line.iter().enumerate() {
             match cell {
@@ -62,21 +59,20 @@ fn part1(input: &Data) -> u64 {
         }
     }
 
+    // for each unique star combination, find the closest star
     let distance: u64 = star_positions
         .iter()
         .combinations(2)
         .unique()
-        //.unique()
         .map(|vec| {
             let a = vec[0];
             let b = vec[1];
-            println!("Pair {a:?} {b:?}");
             a.taxicab_distance(*b)
         })
-        // .count();
         .sum();
 
-    dbg!(distance)
+    //eprintln!("{data}");
+    distance
 }
 
 #[derive(Debug, Clone)]
@@ -104,6 +100,9 @@ impl From<Vec<Vec<Option<()>>>> for Map {
 }
 
 fn parse(input: &str) -> Result<Data> {
+    if input.is_empty() {
+        Err(Report::msg("No input given"))?;
+    }
     // for each char in each line, if its a ̀`#`, put Some(()) else None
     Ok(input
         .lines()
@@ -141,11 +140,21 @@ impl Star<u64> {
     }
 }
 
-fn empty_space_to_indices(colums: Vec<i32>, rows: Vec<bool>) -> (Vec<usize>, Vec<usize>) {
+fn empty_space_to_indices(
+    colums: Vec<u32>,
+    rows: Vec<bool>,
+    row_count: u32,
+) -> (Vec<usize>, Vec<usize>) {
     let colums_to_insert = colums
         .iter()
         .enumerate()
-        .filter_map(|(i, empty_space)| if *empty_space == 10 { Some(i) } else { None })
+        .filter_map(|(i, empty_space)| {
+            if *empty_space >= row_count {
+                Some(i)
+            } else {
+                None
+            }
+        })
         .collect::<Vec<_>>();
 
     let rows_to_insert = rows
@@ -157,11 +166,10 @@ fn empty_space_to_indices(colums: Vec<i32>, rows: Vec<bool>) -> (Vec<usize>, Vec
     (colums_to_insert, rows_to_insert)
 }
 
-fn get_empty_rows(data: &Map) -> (Vec<bool>, Vec<i32>) {
+fn get_empty(data: &Map) -> (Vec<bool>, Vec<u32>) {
     let colums = RefCell::new(vec![0; data.0[0].len()]);
     let mut rows = Vec::with_capacity(data.0.len());
     for (_, line) in data.0.iter().enumerate() {
-        println!();
         let x = line
             .iter()
             .enumerate()
@@ -171,7 +179,6 @@ fn get_empty_rows(data: &Map) -> (Vec<bool>, Vec<i32>) {
                 if cell_is_empty {
                     colums.borrow_mut()[j] += 1;
                 }
-                // print!("{i} {j} empty: {cell_is_empty}  ");
                 cell_is_empty
             })
             // collect so the column computation works
