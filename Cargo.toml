@@ -10,4 +10,5 @@ anyhow = "1.0.79"
 aoc_lib = { path = "../aoc_lib" }
 color-eyre = "0.6.2"
 colored = "2.1.0"
+hashbrown = "0.14.3"
 itertools = "0.12.1"

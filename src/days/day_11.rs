@@ -18,6 +18,11 @@ fn run_part1(input: &str, b: Bench) -> BenchResult {
     b.bench(|| Ok::<_, NoError>(part1(&data)))
 }
 
+fn run_part2(input: &str, b: Bench) -> BenchResult {
+    let data = parse(input).map_err(UserError)?;
+    b.bench(|| Ok::<_, NoError>(part2::part2(&data)))
+}
+
 fn run_parse(input: &str, b: Bench) -> BenchResult {
     b.bench(|| {
         let data = parse(input).map_err(UserError)?;
@@ -37,17 +42,9 @@ fn part1(input: &Data) -> u64 {
     let (colums_to_insert, rows_to_insert) =
         empty_space_to_indices(columns, rows, data.0.len() as u32);
 
-    for (already_inserted, index) in colums_to_insert.iter().enumerate() {
-        for line in &mut data.0 {
-            line.insert(*index + already_inserted, Option::None);
-        }
-    }
+    insert_columns(colums_to_insert, &mut data);
 
-    let empty_row = vec![None; data.0[0].len()];
-
-    for (already_inserted, index) in rows_to_insert.iter().enumerate() {
-        data.0.insert(*index + already_inserted, empty_row.clone());
-    }
+    insert_rows(rows_to_insert, &mut data);
 
     let mut star_positions: Vec<Star<_>> = vec![];
     for (y, line) in data.0.iter().enumerate() {
@@ -75,9 +72,26 @@ fn part1(input: &Data) -> u64 {
     distance
 }
 
+fn insert_columns(colums_to_insert: Vec<usize>, data: &mut Map) {
+    for (already_inserted, index) in colums_to_insert.iter().enumerate() {
+        for line in &mut data.0 {
+            line.insert(*index + already_inserted, Option::None);
+        }
+    }
+}
+
+fn insert_rows(rows_to_insert: Vec<usize>, data: &mut Map) {
+    let empty_row = vec![None; data.0[0].len()];
+    for (already_inserted, index) in rows_to_insert.iter().enumerate() {
+        data.0.insert(*index + already_inserted, empty_row.clone());
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Map(Vec<Vec<Option<()>>>);
 use colored::Colorize;
+
+use self::part2::part2;
 impl std::fmt::Display for Map {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for row in &self.0 {
@@ -197,7 +211,7 @@ mod day11_tests {
     use aoc_lib::Example;
 
     #[test]
-    fn day11() {
+    fn day11_1() {
         let data = aoc_lib::input(DAY.day)
             .example(Example::Part1, 0)
             .open()
@@ -208,5 +222,119 @@ mod day11_tests {
         let actual = part1(&parsed);
 
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn day11_2() {
+        let data = aoc_lib::input(DAY.day)
+            .example(Example::Part1, 0)
+            .open()
+            .unwrap();
+
+        let parsed = parse(&data).unwrap();
+        // let expected = 1030;
+        let actual = part2(&parsed);
+
+        panic!()
+        // assert_eq!(expected, actual);
+    }
+}
+
+mod part2 {
+
+    use super::*;
+    use hashbrown::HashSet;
+    struct ThisMap(Vec<(Vec<Option<()>>, usize)>, Vec<usize>);
+    impl From<Map> for ThisMap {
+        fn from(value: Map) -> Self {
+            //! add zeroes to each row and column
+            let column_size = value.0[0].len();
+            let row_size = value.0.len();
+            Self(
+                // add zeroes to each row and columns
+                value
+                    .0
+                    .into_iter()
+                    // .map(|line| {
+                    //     line.into_iter()
+                    //         // .map(|x| *x)
+                    //         //.zip([0_usize].into_iter().cycle())
+                    //         .collect::<Vec<_>>()
+                    // })
+                    .zip([0_usize].into_iter().cycle())
+                    .collect(),
+                vec![0; row_size],
+            )
+        }
+    }
+    const EXPAND_BY: usize = 1_000_000;
+    fn insert_columns(
+        colums_to_insert: Vec<usize>,
+        rows_to_insert: Vec<usize>,
+        data: &mut ThisMap,
+    ) {
+        let columns_set: HashSet<&usize> = HashSet::from_iter(colums_to_insert.iter());
+        let mut rows_iter = rows_to_insert.into_iter().peekable();
+
+        for (i, (row, mut column_expansion)) in &mut data.0.iter().enumerate() {
+            // if this row should be expanded (is empty),
+            // consume the iterator and
+            if Some(&i) == rows_iter.peek() {
+                println!("Expand {i}, {row:?}");
+                column_expansion += 1;
+                rows_iter.next().unwrap();
+            }
+
+            for (j, (cell, mut row_expansion)) in row.iter().zip(data.1.clone()).enumerate() {
+                if columns_set.contains(&j) {
+                    println!("Expand {j}, {cell:?}, y: {}", column_expansion + j);
+                }
+            }
+        }
+    }
+
+    fn insert_rows(rows_to_insert: Vec<usize>, data: &mut ThisMap) {}
+
+    pub fn part2(input: &Data) -> u64 {
+        let mut data = input.to_owned();
+        // this vector holds the amount of empty space in a column
+        // if its 10, the column is empty
+
+        // check which rows are empty
+        let (rows, columns) = get_empty(&data);
+
+        // map the rows and colums to vecs of the indices where empty space needs to be inserted
+        let (colums_to_insert, rows_to_insert) =
+            empty_space_to_indices(columns, rows, data.0.len() as u32);
+
+        let mut data = ThisMap::from(data);
+        insert_columns(dbg!(colums_to_insert), rows_to_insert, &mut data);
+
+        // insert_rows(rows_to_insert, &mut data);
+
+        let mut star_positions: Vec<Star<_>> = vec![];
+        for (y, (line, _)) in data.0.iter().enumerate() {
+            for (x, cell) in line.iter().enumerate() {
+                match cell {
+                    Some(_) => star_positions.push(Star::new((x, y))),
+                    None => (),
+                }
+            }
+        }
+
+        // for each unique star combination, find the closest star
+        let distance: u64 = star_positions
+            .iter()
+            .combinations(2)
+            .unique()
+            .map(|vec| {
+                let a = vec[0];
+                let b = vec[1];
+                a.taxicab_distance(*b)
+            })
+            .sum();
+
+        //eprintln!("{data}");
+        distance
     }
 }
