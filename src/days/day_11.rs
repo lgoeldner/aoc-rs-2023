@@ -31,7 +31,7 @@ impl std::fmt::Display for Map {
             for cell in row {
                 match cell {
                     Some(_) => write!(f, "{}", "#".red())?,
-                    None => write!(f, ".")?,
+                    None => write!(f, "{}", ".".bright_blue())?,
                 }
             }
             writeln!(f)?;
@@ -62,7 +62,7 @@ fn parse(input: &str) -> Result<Data> {
         .collect::<Vec<Vec<Option<()>>>>()
         .into())
 }
-
+use itertools::Itertools;
 use std::cell::RefCell;
 fn part1(input: &Data) -> u32 {
     let mut data = input.to_owned();
@@ -75,8 +75,8 @@ fn part1(input: &Data) -> u32 {
     // map the rows and colums to vecs of the indices where empty space needs to be inserted
     let (colums_to_insert, rows_to_insert) = empty_space_to_indices(columns, rows);
 
-    dbg!(&rows_to_insert);
-    dbg!(&colums_to_insert);
+    // dbg!(&rows_to_insert);
+    // dbg!(&colums_to_insert);
 
     for (already_inserted, index) in colums_to_insert.iter().enumerate() {
         for line in &mut data.0 {
@@ -90,13 +90,47 @@ fn part1(input: &Data) -> u32 {
         data.0.insert(*index + already_inserted, empty_row.clone());
     }
 
+    let mut star_positions: Vec<Star<_>> = vec![];
     println!("{data}");
-	for (y, line) in data.0.iter().enumerate() {
-		for (x, cell) in line.iter().enumerate() {
-			
-		}
-	}
+    for (y, line) in data.0.iter().enumerate() {
+        for (x, cell) in line.iter().enumerate() {
+            match cell {
+                Some(_) => star_positions.push(Star::new((x, y))),
+                None => (),
+            }
+        }
+    }
+
+    for (star1, star2) in star_positions
+        .iter()
+        .cartesian_product(star_positions.iter())
+        .unique()
+    {}
+
+    dbg!(&star_positions);
     0
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Star<N> {
+    pub x: N,
+    pub y: N,
+    pub 
+}
+
+impl Star<u64> {
+    pub fn new(point: (usize, usize)) -> Self {
+        Self {
+            x: point.0 as u64,
+            y: point.1 as u64,
+        }
+    }
+
+    pub fn taxicab_distance(self, other: Self) -> u64 {
+        // cast to i128 to prevent overflow and then back to u64 after using abs()
+        (self.x as i128 - other.x as i128).abs() as u64
+            + (self.y as i128 - other.y as i128).abs() as u64
+    }
 }
 
 fn empty_space_to_indices(colums: Vec<i32>, rows: Vec<bool>) -> (Vec<usize>, Vec<usize>) {
@@ -118,7 +152,7 @@ fn empty_space_to_indices(colums: Vec<i32>, rows: Vec<bool>) -> (Vec<usize>, Vec
 fn get_empty_rows(data: &Map) -> (Vec<bool>, Vec<i32>) {
     let colums = RefCell::new(vec![0; data.0[0].len()]);
     let mut rows = Vec::with_capacity(data.0.len());
-    for (i, line) in data.0.iter().enumerate() {
+    for (_, line) in data.0.iter().enumerate() {
         println!();
         let x = line
             .iter()
