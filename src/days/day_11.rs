@@ -7,7 +7,7 @@ pub const DAY: Day = Day {
     day: 11,
     name: "Cosmic Expansion",
     part_1: run_part1,
-    part_2: None,
+    part_2: Some(run_part2),
     other: &[("Parse", run_parse)],
 };
 
@@ -20,7 +20,7 @@ fn run_part1(input: &str, b: Bench) -> BenchResult {
 
 fn run_part2(input: &str, b: Bench) -> BenchResult {
     let data = parse(input).map_err(UserError)?;
-    b.bench(|| Ok::<_, NoError>(part2::part2(&data)))
+    b.bench(|| Ok::<_, NoError>(part2::part2(&data, 1_000_000)))
 }
 
 fn run_parse(input: &str, b: Bench) -> BenchResult {
@@ -226,44 +226,55 @@ mod day11_tests {
 
     #[test]
     fn day11_2() {
+        const EXPAND_BY: u64 = 1;
+
         let data = aoc_lib::input(DAY.day)
             .example(Example::Part1, 0)
             .open()
             .unwrap();
 
         let parsed = parse(&data).unwrap();
-        let expected = 8410;
-        let actual = part2(&parsed);
-
-        // panic!()
-         assert_eq!(expected, actual);
+        {
+            let expected = 374;
+            let actual = part2(&parsed, EXPAND_BY);
+            assert_eq!(expected, actual);
+        }
+        {
+            let expected = 1030;
+            let actual = part2(&parsed, 10);
+            assert_eq!(expected, actual);
+        }
+		{
+            let expected = 8410;
+            let actual = part2(&parsed, 100);
+            assert_eq!(expected, actual);
+        }
     }
 }
 mod part2 {
 
-    enum ExpandType<T> {
-        Expand,
-        Empty,
-        Full(T),
-    }
+    // enum ExpandType<T> {
+    //     Expand,
+    //     Empty,
+    //     Full(T),
+    // }
 
     use super::*;
-    use hashbrown::HashSet;
-    struct ThisMap(Vec<ExpandType<Vec<ExpandType<()>>>>);
-    impl From<Map> for ThisMap {
-        fn from(value: Map) -> Self {
-            //! add zeroes to each row and column
-            let column_size = value.0[0].len();
-            let row_size = value.0.len();
-            Self(
-                // add zeroes to each row and columns
-                todo!(),
-            )
-        }
-    }
-    const EXPAND_BY: u64 = 1_00;
+    // use hashbrown::HashSet;
+    // struct ThisMap(Vec<ExpandType<Vec<ExpandType<()>>>>);
+    // impl From<Map> for ThisMap {
+    //     fn from(value: Map) -> Self {
+    //         //! add zeroes to each row and column
+    //         let column_size = value.0[0].len();
+    //         let row_size = value.0.len();
+    //         Self(
+    //             // add zeroes to each row and columns
+    //             todo!(),
+    //         )
+    //     }
+    // }
 
-    pub fn part2(input: &Data) -> u64 {
+    pub fn part2(input: &Data, expansion_factor: u64) -> u64 {
         let mut data = input.to_owned();
         // this vector holds the amount of empty space in a column
         // if its 10, the column is empty
@@ -288,22 +299,20 @@ mod part2 {
             .map(|x| x == &(column_count as u32))
             .collect::<Vec<_>>();
 
-        let star_positions = convert_map(rows, columns, &mut data);
-        
+        let star_positions = convert_map(rows, columns, &mut data, expansion_factor);
 
         // for each unique star combination, find the closest star
         let distance: u64 = star_positions
-        .iter()
-        .combinations(2)
-        .unique()
-        .map(|vec| {
-            let a = vec[0];
-            let b = vec[1];
-            a.taxicab_distance(*b)
-        })
-        .sum();
+            .iter()
+            .combinations(2)
+            .unique()
+            .map(|vec| {
+                let a = vec[0];
+                let b = vec[1];
+                a.taxicab_distance(*b)
+            })
+            .sum();
 
-        
         dbg!(distance)
         // todo!()
     }
@@ -318,7 +327,13 @@ mod part2 {
         EmptyColumn,
         EmptySpace,
     }
-    fn convert_map(empty_rows: Vec<bool>, empty_colums: Vec<bool>, data: &mut Map) -> Vec<Star<u64>> {
+
+    fn convert_map(
+        empty_rows: Vec<bool>,
+        empty_colums: Vec<bool>,
+        data: &mut Map,
+        expansion_factor: u64,
+    ) -> Vec<Star<u64>> {
         let mut result = vec![];
         for ((y, row), row_is_empty) in data.0.iter_mut().enumerate().zip(empty_rows) {
             if row_is_empty {
@@ -345,22 +360,35 @@ mod part2 {
             result.push(MapRow::Full(temp));
         }
         dbg!(&result);
+        to_star_positions(result, expansion_factor)
+    }
+
+    /// convert the Map, that's not a Vec<MapRow>
+    fn to_star_positions(result: Vec<MapRow>, expansion_factor: u64) -> Vec<Star<u64>> {
         let mut stars = vec![];
         // walk the map to convert the star positions
         let mut y_offset = 0;
         for mut row in result {
             match row {
-                MapRow::Empty => {y_offset += 1; print!("Y incr to {y_offset}")},
+                MapRow::Empty => {
+                    y_offset += 1;
+                    print!("Y incr to {y_offset}")
+                }
                 MapRow::Full(row) => {
-                    
                     let mut x_offset = 0;
                     for cell in row {
                         match cell {
-                            StarCell::EmptyColumn => {print!("EmptyCol"); x_offset += 1},
+                            StarCell::EmptyColumn => {
+                                print!("EmptyCol");
+                                x_offset += 1
+                            }
                             StarCell::EmptySpace => (),
                             StarCell::Star { x, y } => {
-                                print!("StarCreate"); 
-                                stars.push(Star::new((x + x_offset * EXPAND_BY, y + y_offset * EXPAND_BY)))
+                                print!("StarCreate");
+                                stars.push(Star::new((
+                                    x + x_offset * expansion_factor,
+                                    y + y_offset * expansion_factor,
+                                )))
                             }
                         }
                     }
