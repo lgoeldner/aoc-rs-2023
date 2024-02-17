@@ -232,11 +232,11 @@ mod day11_tests {
             .unwrap();
 
         let parsed = parse(&data).unwrap();
-        // let expected = 1030;
+        let expected = 8410;
         let actual = part2(&parsed);
 
-        panic!()
-        // assert_eq!(expected, actual);
+        // panic!()
+         assert_eq!(expected, actual);
     }
 }
 mod part2 {
@@ -261,7 +261,7 @@ mod part2 {
             )
         }
     }
-    const EXPAND_BY: u64 = 1_000_000;
+    const EXPAND_BY: u64 = 1_00;
 
     pub fn part2(input: &Data) -> u64 {
         let mut data = input.to_owned();
@@ -288,21 +288,11 @@ mod part2 {
             .map(|x| x == &(column_count as u32))
             .collect::<Vec<_>>();
 
-        convert_map(rows, columns, &mut data);
-        /*
-        let mut star_positions: Vec<Star<_>> = vec![];
-        for (y, (line, _)) in data.0.iter().enumerate() {
-            for (x, cell) in line.iter().enumerate() {
-                match cell {
-                    Some(_) => star_positions.push(Star::new((x, y))),
-                    None => (),
-                }
-            }
-        }
-         */
+        let star_positions = convert_map(rows, columns, &mut data);
+        
 
         // for each unique star combination, find the closest star
-        /* let distance: u64 = star_positions
+        let distance: u64 = star_positions
         .iter()
         .combinations(2)
         .unique()
@@ -311,11 +301,11 @@ mod part2 {
             let b = vec[1];
             a.taxicab_distance(*b)
         })
-        .sum(); */
+        .sum();
 
-        //eprintln!("{data}");
-        // distance
-        todo!()
+        
+        dbg!(distance)
+        // todo!()
     }
     #[derive(Debug)]
     enum MapRow {
