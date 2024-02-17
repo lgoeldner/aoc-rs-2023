@@ -40,7 +40,7 @@ fn part1(input: &Data) -> u64 {
 
     // map the rows and colums to vecs of the indices where empty space needs to be inserted
     let (colums_to_insert, rows_to_insert) =
-        empty_space_to_indices(columns, rows, data.0.len() as u32);
+        empty_space_to_indices(&columns, &rows, data.0.len() as u32);
 
     insert_columns(colums_to_insert, &mut data);
 
@@ -50,7 +50,7 @@ fn part1(input: &Data) -> u64 {
     for (y, line) in data.0.iter().enumerate() {
         for (x, cell) in line.iter().enumerate() {
             match cell {
-                Some(_) => star_positions.push(Star::new((x, y))),
+                Some(_) => star_positions.push(Star::new((x as u64, y as u64))),
                 None => (),
             }
         }
@@ -138,15 +138,15 @@ pub struct Star<N> {
     pub x: N,
     pub y: N,
 }
-
-impl Star<u64> {
-    pub fn new(point: (usize, usize)) -> Self {
+impl<N> Star<N> {
+    pub fn new(point: (N, N)) -> Self {
         Self {
-            x: point.0 as u64,
-            y: point.1 as u64,
+            x: point.0,
+            y: point.1,
         }
     }
-
+}
+impl Star<u64> {
     pub fn taxicab_distance(self, other: Self) -> u64 {
         // cast to i128 to prevent overflow and then back to u64 after using abs()
         (self.x as i128 - other.x as i128).abs() as u64
@@ -155,8 +155,8 @@ impl Star<u64> {
 }
 
 fn empty_space_to_indices(
-    colums: Vec<u32>,
-    rows: Vec<bool>,
+    colums: &Vec<u32>,
+    rows: &Vec<bool>,
     row_count: u32,
 ) -> (Vec<usize>, Vec<usize>) {
     let colums_to_insert = colums
@@ -239,12 +239,17 @@ mod day11_tests {
         // assert_eq!(expected, actual);
     }
 }
-
 mod part2 {
+
+    enum ExpandType<T> {
+        Expand,
+        Empty,
+        Full(T),
+    }
 
     use super::*;
     use hashbrown::HashSet;
-    struct ThisMap(Vec<(Vec<Option<()>>, usize)>, Vec<usize>);
+    struct ThisMap(Vec<ExpandType<Vec<ExpandType<()>>>>);
     impl From<Map> for ThisMap {
         fn from(value: Map) -> Self {
             //! add zeroes to each row and column
@@ -252,48 +257,11 @@ mod part2 {
             let row_size = value.0.len();
             Self(
                 // add zeroes to each row and columns
-                value
-                    .0
-                    .into_iter()
-                    // .map(|line| {
-                    //     line.into_iter()
-                    //         // .map(|x| *x)
-                    //         //.zip([0_usize].into_iter().cycle())
-                    //         .collect::<Vec<_>>()
-                    // })
-                    .zip([0_usize].into_iter().cycle())
-                    .collect(),
-                vec![0; row_size],
+                todo!(),
             )
         }
     }
-    const EXPAND_BY: usize = 1_000_000;
-    fn insert_columns(
-        colums_to_insert: Vec<usize>,
-        rows_to_insert: Vec<usize>,
-        data: &mut ThisMap,
-    ) {
-        let columns_set: HashSet<&usize> = HashSet::from_iter(colums_to_insert.iter());
-        let mut rows_iter = rows_to_insert.into_iter().peekable();
-
-        for (i, (row, mut column_expansion)) in &mut data.0.iter().enumerate() {
-            // if this row should be expanded (is empty),
-            // consume the iterator and
-            if Some(&i) == rows_iter.peek() {
-                println!("Expand {i}, {row:?}");
-                column_expansion += 1;
-                rows_iter.next().unwrap();
-            }
-
-            for (j, (cell, mut row_expansion)) in row.iter().zip(data.1.clone()).enumerate() {
-                if columns_set.contains(&j) {
-                    println!("Expand {j}, {cell:?}, y: {}", column_expansion + j);
-                }
-            }
-        }
-    }
-
-    fn insert_rows(rows_to_insert: Vec<usize>, data: &mut ThisMap) {}
+    const EXPAND_BY: u64 = 1_000_000;
 
     pub fn part2(input: &Data) -> u64 {
         let mut data = input.to_owned();
@@ -305,13 +273,23 @@ mod part2 {
 
         // map the rows and colums to vecs of the indices where empty space needs to be inserted
         let (colums_to_insert, rows_to_insert) =
-            empty_space_to_indices(columns, rows, data.0.len() as u32);
+            empty_space_to_indices(&columns, &rows, data.0.len() as u32);
+        // convert
 
-        let mut data = ThisMap::from(data);
-        insert_columns(dbg!(colums_to_insert), rows_to_insert, &mut data);
-
+        // let mut data = ThisMap::from(data);
+        // insert_columns(colums_to_insert, &mut data);
         // insert_rows(rows_to_insert, &mut data);
 
+        // convert columns to vec<bool>
+        let column_count = data.0[0].len();
+
+        let columns = columns
+            .iter()
+            .map(|x| x == &(column_count as u32))
+            .collect::<Vec<_>>();
+
+        convert_map(rows, columns, &mut data);
+        /*
         let mut star_positions: Vec<Star<_>> = vec![];
         for (y, (line, _)) in data.0.iter().enumerate() {
             for (x, cell) in line.iter().enumerate() {
@@ -321,20 +299,86 @@ mod part2 {
                 }
             }
         }
+         */
 
         // for each unique star combination, find the closest star
-        let distance: u64 = star_positions
-            .iter()
-            .combinations(2)
-            .unique()
-            .map(|vec| {
-                let a = vec[0];
-                let b = vec[1];
-                a.taxicab_distance(*b)
-            })
-            .sum();
+        /* let distance: u64 = star_positions
+        .iter()
+        .combinations(2)
+        .unique()
+        .map(|vec| {
+            let a = vec[0];
+            let b = vec[1];
+            a.taxicab_distance(*b)
+        })
+        .sum(); */
 
         //eprintln!("{data}");
-        distance
+        // distance
+        todo!()
+    }
+    #[derive(Debug)]
+    enum MapRow {
+        Full(Vec<StarCell>),
+        Empty,
+    }
+    #[derive(Debug)]
+    enum StarCell {
+        Star { x: u64, y: u64 },
+        EmptyColumn,
+        EmptySpace,
+    }
+    fn convert_map(empty_rows: Vec<bool>, empty_colums: Vec<bool>, data: &mut Map) -> Vec<Star<u64>> {
+        let mut result = vec![];
+        for ((y, row), row_is_empty) in data.0.iter_mut().enumerate().zip(empty_rows) {
+            if row_is_empty {
+                result.push(MapRow::Empty);
+            }
+            // else
+            let mut temp = vec![];
+
+            for ((x, cell), column_is_empty) in row.iter_mut().enumerate().zip(empty_colums.clone())
+            {
+                if !column_is_empty && cell.is_some() {
+                    temp.push(StarCell::Star {
+                        x: x as u64,
+                        y: y as u64,
+                    });
+                } else if column_is_empty {
+                    temp.push(StarCell::EmptyColumn)
+                } else {
+                    temp.push(StarCell::EmptySpace);
+                    assert!(cell.is_none());
+                }
+            }
+
+            result.push(MapRow::Full(temp));
+        }
+        dbg!(&result);
+        let mut stars = vec![];
+        // walk the map to convert the star positions
+        let mut y_offset = 0;
+        for mut row in result {
+            match row {
+                MapRow::Empty => {y_offset += 1; print!("Y incr to {y_offset}")},
+                MapRow::Full(row) => {
+                    
+                    let mut x_offset = 0;
+                    for cell in row {
+                        match cell {
+                            StarCell::EmptyColumn => {print!("EmptyCol"); x_offset += 1},
+                            StarCell::EmptySpace => (),
+                            StarCell::Star { x, y } => {
+                                print!("StarCreate"); 
+                                stars.push(Star::new((x + x_offset * EXPAND_BY, y + y_offset * EXPAND_BY)))
+                            }
+                        }
+                    }
+                }
+            }
+            println!();
+        }
+
+        dbg!(stars)
     }
 }
