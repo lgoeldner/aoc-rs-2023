@@ -20,7 +20,7 @@ fn run_part1(input: &str, b: Bench) -> BenchResult {
 
 fn run_part2(input: &str, b: Bench) -> BenchResult {
     let data = parse(input).map_err(UserError)?;
-    b.bench(|| Ok::<_, NoError>(part2::part2(&data, 1_000_000)))
+    b.bench(|| Ok::<_, NoError>(part2::part2(&data, 1_000_000 - 1)))
 }
 
 fn run_parse(input: &str, b: Bench) -> BenchResult {
@@ -91,7 +91,7 @@ fn insert_rows(rows_to_insert: Vec<usize>, data: &mut Map) {
 pub struct Map(Vec<Vec<Option<()>>>);
 use colored::Colorize;
 
-use self::part2::part2;
+
 impl std::fmt::Display for Map {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for row in &self.0 {
@@ -241,38 +241,20 @@ mod day11_tests {
         }
         {
             let expected = 1030;
-            let actual = part2(&parsed, 10);
+            let actual = part2(&parsed, 10 - 1);
             assert_eq!(expected, actual);
         }
 		{
             let expected = 8410;
-            let actual = part2(&parsed, 100);
+            let actual = part2(&parsed, 100 - 1);
             assert_eq!(expected, actual);
         }
     }
 }
 mod part2 {
 
-    // enum ExpandType<T> {
-    //     Expand,
-    //     Empty,
-    //     Full(T),
-    // }
-
     use super::*;
-    // use hashbrown::HashSet;
-    // struct ThisMap(Vec<ExpandType<Vec<ExpandType<()>>>>);
-    // impl From<Map> for ThisMap {
-    //     fn from(value: Map) -> Self {
-    //         //! add zeroes to each row and column
-    //         let column_size = value.0[0].len();
-    //         let row_size = value.0.len();
-    //         Self(
-    //             // add zeroes to each row and columns
-    //             todo!(),
-    //         )
-    //     }
-    // }
+
 
     pub fn part2(input: &Data, expansion_factor: u64) -> u64 {
         let mut data = input.to_owned();
@@ -281,15 +263,6 @@ mod part2 {
 
         // check which rows are empty
         let (rows, columns) = get_empty(&data);
-
-        // map the rows and colums to vecs of the indices where empty space needs to be inserted
-        let (colums_to_insert, rows_to_insert) =
-            empty_space_to_indices(&columns, &rows, data.0.len() as u32);
-        // convert
-
-        // let mut data = ThisMap::from(data);
-        // insert_columns(colums_to_insert, &mut data);
-        // insert_rows(rows_to_insert, &mut data);
 
         // convert columns to vec<bool>
         let column_count = data.0[0].len();
@@ -313,8 +286,7 @@ mod part2 {
             })
             .sum();
 
-        dbg!(distance)
-        // todo!()
+        distance
     }
     #[derive(Debug)]
     enum MapRow {
@@ -359,7 +331,6 @@ mod part2 {
 
             result.push(MapRow::Full(temp));
         }
-        dbg!(&result);
         to_star_positions(result, expansion_factor)
     }
 
@@ -368,23 +339,20 @@ mod part2 {
         let mut stars = vec![];
         // walk the map to convert the star positions
         let mut y_offset = 0;
-        for mut row in result {
+        for row in result {
             match row {
                 MapRow::Empty => {
                     y_offset += 1;
-                    print!("Y incr to {y_offset}")
                 }
                 MapRow::Full(row) => {
                     let mut x_offset = 0;
                     for cell in row {
                         match cell {
                             StarCell::EmptyColumn => {
-                                print!("EmptyCol");
                                 x_offset += 1
                             }
                             StarCell::EmptySpace => (),
                             StarCell::Star { x, y } => {
-                                print!("StarCreate");
                                 stars.push(Star::new((
                                     x + x_offset * expansion_factor,
                                     y + y_offset * expansion_factor,
@@ -394,9 +362,8 @@ mod part2 {
                     }
                 }
             }
-            println!();
         }
 
-        dbg!(stars)
+        stars
     }
 }
